@@ -1,21 +1,25 @@
-FROM alpine:3.4
+# Start from latest alpine
+FROM alpine:3.8
 MAINTAINER Jake Skeates <jake@skeat.es>
 
-ARG TIPPECANOE_RELEASE="1.14.4"
+ARG TIPPECANOE_RELEASE="1.30.1"
 
-RUN apk add --no-cache sudo git g++ make libgcc libstdc++ sqlite-libs sqlite-dev zlib-dev bash \
- && addgroup sudo && adduser -G sudo -D -H tippecanoe && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
- && cd /root \
- && git clone https://github.com/mapbox/tippecanoe.git tippecanoe \
- && cd tippecanoe \
- && git checkout tags/$TIPPECANOE_RELEASE \
- && cd /root/tippecanoe \
- && make \
- && make install \
- && cd /root \
- && rm -rf /root/tippecanoe \
- && apk del git g++ make sqlite-dev
+# Update repos and install dependencies
+RUN apk update \
+    && apk upgrade \
+    && apk add git bash build-base sqlite-libs sqlite-dev zlib-dev protobuf \
+    && mkdir -p /tmp/tippecanoe \
+    && cd /tmp/tippecanoe \
+    && git clone https://github.com/mapbox/tippecanoe.git . \
+    && cd /tmp/tippecanoe \
+    && git checkout tags/$TIPPECANOE_RELEASE \
+    && cd /tmp/tippecanoe \
+    && make -j && make install \
+    && rm -rf /tmp/tippecanoe \
+    && apk del build-base \
+    && apk del git \
+    && mkdir -p /home/tippecanoe
 
-USER tippecanoe
+# Setup environment
 WORKDIR /home/tippecanoe
 ENTRYPOINT /bin/bash
